@@ -142,10 +142,11 @@ def lookup_spf_record(domain):
     print(" SPF record...")
     try:
         txt_records = dns.resolver.resolve(domain, "TXT")
-    except dns.resolver.NoAnswer:
-        return "no SPF Record found"
     except dns.resolver.LifetimeTimeout:
         return "Timeout! SPF could not be retrieved"
+    except Exception as e:
+        return "No SPF found or could not be retrieved"
+
     for record in txt_records:
         spf_record = "".join([a.decode("utf-8") for a in record.strings])
         if "v=spf" in spf_record:
@@ -177,10 +178,15 @@ def lookup_dmarc_record(domain):
         (record, location, parsed) = dmarc_record_list
         dmarc_record_string += "Record: " + record[1] + "; " + "Location: " + location[1]
         return replace_characters(dmarc_record_string)
-    except (UnverifiedDMARCURIDestination, MultipleDMARCRecords, DMARCRecordNotFound) as e:
-        return e
+    except DMARCRecordNotFound:
+        return "A DMARC record does not exist for %s or its base domain" % domain
     except (InvalidDMARCTagValue):
         return "Tag Value Error"
+    except MultipleDMARCRecords as e:
+        return e
+    except Exception:
+        # TODO: better error handling
+        return "Error: DMARC could not be retrieved"
 
 
 def prepare_summary_output(security_check_result):
