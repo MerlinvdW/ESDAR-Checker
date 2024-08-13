@@ -11,7 +11,7 @@ ESDAR-Checker should help to check for one or more up to a larger number of doma
 """
 import checkdmarc
 import dns.resolver
-from config import update_path
+from config import update_path, get_nameserver_list
 # Import Libraries for Domain specific check
 # import pkg_resources
 # pkg_resources.require("checkdmarc==4.4.1")
@@ -171,7 +171,7 @@ def lookup_dmarc_record(domain):
     print(" DMARC record...")
     dmarc_record_string = ""
     try:
-        raw_dmarc_record = checkdmarc.get_dmarc_record(domain, nameservers=["8.8.8.8", "https://ns1.avectris.ch"],
+        raw_dmarc_record = checkdmarc.get_dmarc_record(domain, nameservers=get_nameserver_list(),
                                                        timeout=10)
         dmarc_record_list = list(raw_dmarc_record.items())
         (record, location, parsed) = dmarc_record_list

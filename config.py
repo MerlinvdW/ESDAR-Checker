@@ -9,7 +9,13 @@ E.g: resources/output/ or you can also use the absolute filepath C:/Users/[USERN
 @date 08.08.2024
 """
 RELATIVE_FILE_PATH = "resources/output/"
+NAMESERVER_LIST = ["8.8.8.8", "https://ns1.avectris.ch", "https://ns2.avectris.ch"]
+
 
 def update_path(path):
     global RELATIVE_FILE_PATH
     RELATIVE_FILE_PATH = path
+
+
+def get_nameserver_list():
+    return NAMESERVER_LIST
