@@ -1,87 +1,192 @@
 """
+CSV Helper Module for ESDAR-Checker
+Handles CSV file operations for reading and writing DNS check results
+
 @author Merlin von der Weide
-@version 1.2.0-beta
-@date 08.08.2024
+@date 2025
+@version 2.0.0
 """
 import csv
 import os
-import sys
+from typing import List, Dict, Any
 
 import config
+from terminal_message_handler import print_error, print_warning
 
 OUTPUT_FILENAME = "esdar-check_result.csv"
 
 
-def prepare_csv_output(security_check_result):
-    # TODO: Design the output for the CSV output.
-    return security_check_result
+def get_output_filepath() -> str:
+    """Get the full path to the output CSV file."""
+    return os.path.join(config.RELATIVE_FILE_PATH, OUTPUT_FILENAME).replace("\\", "/")
 
 
-def create_new_csv_file_with_header():
-    # Define the headers for the CSV file
-    headers = ["URL", "MX Record", "SPF Record", "DKIM Record", "DMARC Record"]
-
-    os.makedirs(os.path.dirname(config.RELATIVE_FILE_PATH + OUTPUT_FILENAME), exist_ok=True)
-    # Try open the file and write output, if not working file is opened in OS and has to be closed before
-    try:
-        with open(config.RELATIVE_FILE_PATH + OUTPUT_FILENAME, mode='w', newline='') as file:
-            writer = csv.writer(file, delimiter=",")
-
-            # Write the headers to the CSV file
-            writer.writerow(headers)
-    except:
-        print(
-            "can't write header because %s is open or another error occured." % (config.RELATIVE_FILE_PATH + OUTPUT_FILENAME))
-        sys.exit(1)
-
-
-def write_rows_to_csv(prepared_output):
+def create_csv_file_with_header(filepath: str) -> bool:
     """
-        Writes URL information to a CSV file.
-
-        Parameters:
-        url_info_list (list of lists): A list where each element is a String (TODO: check if this is true) containing information about the DNS records.
-        """
-
-    if not os.path.isfile(config.RELATIVE_FILE_PATH + OUTPUT_FILENAME):
-        os.makedirs(os.path.dirname(config.RELATIVE_FILE_PATH + OUTPUT_FILENAME), exist_ok=True)
-        create_new_csv_file_with_header()
-
-    # Try open the file and write output, if not working file is opened in OS and has to be closed before
+    Create a new CSV file with headers.
+    
+    Args:
+        filepath: Full path to the CSV file
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    headers = ["Domain", "MX Record", "SPF Record", "DKIM Record", "DMARC Record"]
+    
     try:
-        with open(config.RELATIVE_FILE_PATH + OUTPUT_FILENAME, mode='w', newline='') as file:
-            writer = csv.writer(file, delimiter=",")
-            # Add header Row
-            # Define the headers for the CSV file
-            headers = ["URL", "MX Record", "SPF Record", "DKIM Record", "DMARC Record"]
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        
+        with open(filepath, mode='w', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file, delimiter=',', quoting=csv.QUOTE_MINIMAL)
             writer.writerow(headers)
-            # Write the URL information to the CSV file
-            if len(prepared_output) > 1:
-                for url_info in prepared_output:
-                    writer.writerow(url_info)
-            else:
-                writer.writerow(prepared_output)
-    except:
-        print(
-            "can't write output because %s is open, close the file and run the script again." % (
-                    config.RELATIVE_FILE_PATH + OUTPUT_FILENAME))
-        sys.exit(1)
-
-
-def write_new_line_to_csv_file(lines_to_add):
-    # Try to open the file and append output
-    if not os.path.isfile(config.RELATIVE_FILE_PATH + OUTPUT_FILENAME):
-        create_new_csv_file_with_header()
-    try:
-        with open(config.RELATIVE_FILE_PATH + OUTPUT_FILENAME, mode='a', newline='') as file:
-            writer = csv.writer(file, delimiter=",")
-            # Append the new URL information to the CSV file
-            if len(lines_to_add) > 1:
-                for line_to_add in lines_to_add:
-                    writer.writerow(line_to_add)
-            else:
-                writer.writerow(lines_to_add)
+        return True
+    except PermissionError:
+        print_error(f"Cannot write to {filepath} - file is open in another program. Please close it and try again.")
+        return False
     except Exception as e:
-        print(
-            f"Can't append output because {config.RELATIVE_FILE_PATH + OUTPUT_FILENAME} is open, close the file and run the script again.")
-        sys.exit(1)
+        print_error(f"Error creating CSV file: {str(e)}")
+        return False
+
+
+def write_results_to_csv(results: List[Dict[str, Any]], append: bool = False) -> bool:
+    """
+    Write DNS check results to CSV file.
+    
+    Args:
+        results: List of dictionaries containing DNS check results
+        append: If True, append to existing file; if False, overwrite
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    if not results:
+        print_warning("No results to write to CSV")
+        return False
+    
+    filepath = get_output_filepath()
+    
+    # Check if file exists
+    file_exists = os.path.isfile(filepath)
+    
+    # Define headers
+    headers = ["Domain", "MX Record", "SPF Record", "DKIM Record", "DMARC Record"]
+    
+    try:
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        
+        # Determine mode and whether to write header
+        if append:
+            # Append mode: only write header if file doesn't exist
+            mode = 'a'
+            write_header = not file_exists
+        else:
+            # Overwrite mode: always write header
+            mode = 'w'
+            write_header = True
+        
+        with open(filepath, mode=mode, newline='', encoding='utf-8') as file:
+            writer = csv.writer(file, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+            
+            # Write header if needed
+            if write_header:
+                writer.writerow(headers)
+            
+            # Write results
+            for result in results:
+                # Extract values from result dictionary
+                domain = result.get('domain', '')
+                mx = result.get('mx', '')
+                spf = result.get('spf', '')
+                dkim = result.get('dkim', '')
+                dmarc = result.get('dmarc', '')
+                
+                # Write row - each value in its own column
+                writer.writerow([domain, mx, spf, dkim, dmarc])
+        
+        print(f"Results written to {filepath}")
+        return True
+        
+    except PermissionError:
+        print_error(f"Cannot write to {filepath} - file is open in another program. Please close it and try again.")
+        return False
+    except Exception as e:
+        print_error(f"Error writing to CSV file: {str(e)}")
+        return False
+
+
+def read_domains_from_file(filepath: str) -> List[str]:
+    """
+    Read domains from a text file (one domain per line) or CSV file.
+    Tries multiple encodings to handle different file formats.
+    
+    Args:
+        filepath: Path to the input file
+        
+    Returns:
+        List of domain names
+    """
+    domains = []
+    
+    if not os.path.isfile(filepath):
+        print_error(f"File not found: {filepath}")
+        return domains
+    
+    # List of encodings to try (in order of preference)
+    encodings_to_try = ['utf-8', 'utf-8-sig', 'latin-1', 'iso-8859-1', 'windows-1252', 'cp1252']
+    
+    for encoding in encodings_to_try:
+        try:
+            with open(filepath, 'r', encoding=encoding) as file:
+                # Try to detect if it's a CSV file
+                first_line = file.readline().strip()
+                file.seek(0)  # Reset to beginning
+                
+                # If first line looks like CSV header, skip it
+                if ',' in first_line and ('domain' in first_line.lower() or 'url' in first_line.lower()):
+                    # It's a CSV file
+                    reader = csv.reader(file)
+                    next(reader, None)  # Skip header
+                    for row in reader:
+                        if row and row[0].strip():
+                            domains.append(row[0].strip())
+                else:
+                    # It's a plain text file (one domain per line)
+                    for line in file:
+                        domain = line.strip()
+                        # Skip empty lines and comments
+                        if domain and not domain.startswith('#'):
+                            domains.append(domain)
+            
+            # If we got here, the file was read successfully
+            return domains
+            
+        except UnicodeDecodeError:
+            # Try next encoding
+            continue
+        except Exception as e:
+            # For other errors, try next encoding but log a warning
+            if encoding == encodings_to_try[-1]:
+                # Last encoding failed, show error
+                print_error(f"Error reading domains from file: {str(e)}")
+                return domains
+            continue
+    
+    # If all encodings failed
+    print_error(f"Could not read file {filepath} with any supported encoding")
+    return domains
+
+
+def write_single_result_to_csv(result: Dict[str, Any], append: bool = True) -> bool:
+    """
+    Write a single DNS check result to CSV file (useful for processing domains one by one).
+    
+    Args:
+        result: Dictionary containing DNS check result for one domain
+        append: If True, append to existing file; if False, overwrite
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    return write_results_to_csv([result], append=append)
