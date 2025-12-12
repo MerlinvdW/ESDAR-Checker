@@ -38,7 +38,7 @@ def create_csv_file_with_header(filepath: str) -> bool:
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
         with open(filepath, mode='w', newline='', encoding='utf-8') as file:
-            writer = csv.writer(file, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+            writer = csv.writer(file, delimiter=',', quoting=csv.QUOTE_ALL)
             writer.writerow(headers)
         return True
     except PermissionError:
@@ -87,7 +87,9 @@ def write_results_to_csv(results: List[Dict[str, Any]], append: bool = False) ->
             write_header = True
         
         with open(filepath, mode=mode, newline='', encoding='utf-8') as file:
-            writer = csv.writer(file, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+            # Use QUOTE_ALL to ensure all fields are properly quoted
+            # This prevents issues with commas, semicolons, and other special characters
+            writer = csv.writer(file, delimiter=',', quoting=csv.QUOTE_ALL)
             
             # Write header if needed
             if write_header:
@@ -95,14 +97,23 @@ def write_results_to_csv(results: List[Dict[str, Any]], append: bool = False) ->
             
             # Write results
             for result in results:
-                # Extract values from result dictionary
-                domain = result.get('domain', '')
-                mx = result.get('mx', '')
-                spf = result.get('spf', '')
-                dkim = result.get('dkim', '')
-                dmarc = result.get('dmarc', '')
+                # Extract values from result dictionary and ensure they are strings
+                domain = str(result.get('domain', '')).strip()
+                mx = str(result.get('mx', '')).strip()
+                spf = str(result.get('spf', '')).strip()
+                dkim = str(result.get('dkim', '')).strip()
+                dmarc = str(result.get('dmarc', '')).strip()
                 
-                # Write row - each value in its own column
+                # Replace semicolons with pipe character in values to prevent CSV parsing issues
+                # This ensures Excel and other CSV readers don't misinterpret semicolons as delimiters
+                # Pipe character (|) is less likely to cause issues than commas or semicolons
+                domain = domain.replace(';', ' | ')
+                mx = mx.replace(';', ' | ')
+                spf = spf.replace(';', ' | ')
+                dkim = dkim.replace(';', ' | ')
+                dmarc = dmarc.replace(';', ' | ')
+                
+                # Write row - each value in its own column, properly escaped
                 writer.writerow([domain, mx, spf, dkim, dmarc])
         
         print(f"Results written to {filepath}")
