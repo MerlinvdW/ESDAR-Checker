@@ -19,6 +19,8 @@ A Python tool to check email security DNS records (DMARC, SPF, DKIM, MX) for one
 
 - Python 3.7 or higher
 - PowerShell (for Windows) or terminal access
+- you have to be able to run Scripts via Powershell or at least to run the following command in Powershell: ```Set-ExecutionPolicy Unrestricted -Scope Process``` ([Stackoverflow](https://stackoverflow.com/questions/18713086/virtualenv-wont-activate-on-windows))
+
 
 ## Installation
 
