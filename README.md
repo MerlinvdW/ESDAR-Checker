@@ -1,49 +1,189 @@
 # ESDAR-Checker (Email Security DNS Advanced Records Checker)
-## How to use ESDAR-Checker
-Prerequisites:
-- Python3
+## Version 2.0.0
+
+A Python tool to check email security DNS records (DMARC, SPF, DKIM, MX) for one or multiple domains.
+
+## Features
+
+- Check **DMARC** records
+- Check **SPF** records  
+- Check **DKIM** records (with support for multiple selectors)
+- Check **MX** records
+- Process single domain or multiple domains from file
+- Export results to CSV
+- Robust error handling (continues processing on errors)
+- Support for multiple DKIM selectors per domain
+- Improved CSV handling (proper formatting)
+
+## Prerequisites
+
+- Python 3.7 or higher
+- PowerShell (for Windows) or terminal access
 - you have to be able to run Scripts via Powershell or at least to run the following command in Powershell: ```Set-ExecutionPolicy Unrestricted -Scope Process``` ([Stackoverflow](https://stackoverflow.com/questions/18713086/virtualenv-wont-activate-on-windows))
 
 
-1. Clone Github Repository to your local machine
-2. Unpack the Github Repository
-3. run Powershell in the ESDAR-Checker Directory
-4. Create virtual enviroment according to the following [documentation](https://docs.python.org/3/library/venv.html#creating-virtual-environments) (use ```python -m venv .``` to create the virtualenv in the current directory)
-5. Activate the virtualenv with ```.\Scripts\activate```, if you need help you can look into the following [article](https://realpython.com/python-virtual-environments-a-primer/#activate-it)
-6. When you succesfully activatet the virtual enviroment you can install the missing 'checkdmarc, validators and colorama' modules with the following Commands ``` python -m pip install checkdmarc==4.1.1```, ``` python -m pip install validators```, ``` python -m pip install colorama```
-7. Open the python file 'config.py' in the ESDAR-Checker directory
-8. and enter the FULL path to the ouptut directory which you can find in the resources folder.
-9. you have to escape every \ with \ so for example 'C:\\Users\\[USERNAME]\\Downloads\\ESDAR-Checker-1.0.0-beta\\resources\\output' or 'C:/Users/[USERNAME]/Downloads/ESDAR-Checker-1.0.0-beta/resources/output' 
-10. Now your ready to run the ESDAR-Checker!
+## Installation
 
----
-## How to run ESDAR-Checker (Powershell)
-```python .\ESDAR-Checker.py --domain "google.com"```
+1. Clone the repository to your local machine
+2. Navigate to the ESDAR-Checker directory
+3. Create a virtual environment:
+   ```powershell
+   python -m venv .venv
+   ```
+4. Activate the virtual environment:
+   ```powershell
+   # Windows PowerShell
+   .\.venv\Scripts\activate
+   
+   # Linux/Mac
+   source .venv/bin/activate
+   ```
+5. Install dependencies:
+   ```powershell
+   pip install -r requirements.txt
+   ```
+6. (Optional) Configure output path in `config.py` or use `--output_path` parameter
 
-```python .\ESDAR-Checker.py --domains_file "[ABSOLUTE_PATH_TO_CSV_FILE]"```
-**Optional Parameters:**
-- ```--selector [SELECTOR]``` (default is no selector)
-- ```--append [yes/]``` (default is not append)
+## Usage
 
-e.g: ```python .\ESDAR-Checker.py --domain "google.com" --selector "EXAMPLE" --append "yes"```
+### Check a single domain
 
----
+```powershell
+python esdar-checker_v2.py --domain "google.com"
+```
+
+### Check a single domain with DKIM selector
+
+```powershell
+python esdar-checker_v2.py --domain "google.com" --selector "google"
+```
+
+### Check a single domain with multiple DKIM selectors
+
+```powershell
+python esdar-checker_v2.py --domain "google.com" --selectors "default,google,selector1"
+```
+
+### Check multiple domains from file
+
+```powershell
+python esdar-checker_v2.py --domains_file "resources/input/input_urls.csv"
+```
+
+### Append results to existing CSV file
+
+```powershell
+python esdar-checker_v2.py --domain "google.com" --append yes
+```
+
+### Specify custom output path
+
+```powershell
+python esdar-checker_v2.py --domain "google.com" --output_path "C:/Users/YourName/Downloads/results/"
+```
+
+### Continue processing on errors
+
+```powershell
+python esdar-checker_v2.py --domains_file "domains.txt" --skip_errors
+```
+
+### Custom DNS timeout
+
+```powershell
+python esdar-checker_v2.py --domain "google.com" --timeout 15
+```
+
+## Command-Line Arguments
+
+### Required (one of):
+- `--domain DOMAIN`: Check a single domain
+- `--domains_file PATH`: File containing domains (one per line or CSV)
+
+### Optional:
+- `--selector SELECTOR`: Single DKIM selector to check
+- `--selectors "SELECTOR1,SELECTOR2"`: Multiple DKIM selectors (comma-separated)
+- `--append yes/no`: Append to existing CSV file (default: no)
+- `--output_path PATH`: Custom output directory path
+- `--timeout SECONDS`: DNS query timeout in seconds (default: 10)
+- `--skip_errors`: Continue processing other domains if one fails
+
+## Input File Format
+
+The input file can be:
+- **Plain text**: One domain per line
+- **CSV**: First column should contain domain names (header row is automatically skipped)
+
+Example plain text file:
+```
+google.com
+microsoft.com
+github.com
+```
+
+Example CSV file:
+```csv
+Domain
+google.com
+microsoft.com
+github.com
+```
+
+## Output
+
+Results are saved to `esdar-check_result.csv` in the output directory (default: `resources/output/`).
+
+CSV columns:
+- **Domain**: The checked domain
+- **MX Record**: MX records (priority and mail server)
+- **SPF Record**: SPF record if found
+- **DKIM Record**: DKIM record(s) for the provided selector(s)
+- **DMARC Record**: DMARC record if found
+
+## Configuration
+
+Edit `config.py` to:
+- Set default output path (`RELATIVE_FILE_PATH`)
+- Configure nameservers for DNS lookups (`NAMESERVER_LIST`)
+
+## Troubleshooting
+
+### "File is open in another program"
+Close the CSV file in Excel or another program before running the script.
+
+### "No DNS records found"
+- Check if the domain exists
+- Verify DNS connectivity
+- Some domains may not have all security records configured
+
+### "DNS query timeout"
+- Increase timeout with `--timeout` parameter
+- Check your internet connection
+- Try different nameservers in `config.py`
+
+## Known Issues (Fixed in v2.0.0)
+```
+- CSV formatting issues - **FIXED**
+- Multiple selectors support - **ADDED**
+- Error handling improvements - **FIXED**
+- DMARC/DKIM lookup issues - **FIXED**
+```
 
 ## Use Case
-Diese Skript soll dem Benutzer helfen eine beliebige anzahl an Domains respektive URL's auf folgende Punkte zu ueberpruefen
-- DMARC
-- SPF
-- DKIM
-- MX Records
 
-Das Skript prüft dabei ob für die oben genannten Punkte ein DNS TXT record vorhanden ist, wenn dem so ist wird dieser fuer die weitere verwendung zwischengespeihcert.
-Im Anschluss kann der Record eintrag auf dem Terminal ausgegeben werden oder in ein csv file geschrieben werden.
+This script helps users check any number of domains or URLs for the following email security DNS records:
+- **DMARC** (Domain-based Message Authentication, Reporting & Conformance)
+- **SPF** (Sender Policy Framework)
+- **DKIM** (DomainKeys Identified Mail)
+- **MX Records** (Mail Exchange)
 
-## Aktueller Status
-In Entwicklung. Das Skript funktioniert für einzelne Domains sowie mit einem File welches mehrere Domains beinhaltet. Das Error Handling ist jedoch noch nicht ausreichend umgesetzt. 
+The script checks if DNS TXT records exist for the above points and stores them for further use. Results can be displayed in the terminal or written to a CSV file.
 
-## Probleme
-- csv files geben aktuell noch probleme bei der verarbeitung
-- es können nicht mehrere selectoren eingegeben werden
-- einzelne Errors führen zu einem ungewollten absturz
-- das aktuelle skript benötigt die checkdmarc version 4.4.1 und publicsuffix2. Muss noch geändert werden
+## License
+
+See LICENSE file for details.
+
+## Author
+
+Merlin von der Weide
+Version 2.0.0 - 2025
